@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wedding Rental – Booking Calendar</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Lato:wght@300;400;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --rose:      #b5547a;
+      --rose-lt:   #e8afc9;
+      --rose-pale: #fdf0f5;
+      --blush:     #f7dce8;
+      --gold:      #c9a84c;
+      --gold-lt:   #f0e1b0;
+      --text:      #2d1b2e;
+      --text-muted:#7a5c72;
+      --surface:   #ffffff;
+      --border:    #e8d5e0;
+      --shadow:    rgba(45,27,46,.12);
+      --booked-bg: #f8e8f0;
+      --booked-dot:#b5547a;
+      --today-bg:  #c9a84c;
+      --today-fg:  #ffffff;
+      --radius:    14px;
+      --radius-sm: 8px;
+      --transition:.22s ease;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Lato', sans-serif;
+      background: var(--rose-pale);
+      color: var(--text);
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #6b2d4a 0%, #9b3d6a 60%, #c9a84c 100%);
+      color: #fff;
+      padding: 22px 40px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.18);
+    }
+    header .logo { font-size: 2rem; }
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6rem;
+      letter-spacing: .03em;
+    }
+    header p { font-size: .85rem; opacity: .82; margin-top: 2px; }
+
+    main {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 0;
+      overflow: hidden;
+      height: calc(100vh - 88px);
+    }
+
+    .cal-panel {
+      padding: 32px 36px;
+      overflow-y: auto;
+    }
+
+    .cal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+    .cal-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      color: var(--rose);
+    }
+    .nav-btns { display: flex; gap: 10px; }
+    .nav-btn {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      width: 38px; height: 38px;
+      cursor: pointer;
+      font-size: 1rem;
+      color: var(--rose);
+      display: flex; align-items: center; justify-content: center;
+      transition: var(--transition);
+    }
+    .nav-btn:hover {
+      background: var(--rose);
+      border-color: var(--rose);
+      color: #fff;
+    }
+
+    .weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .weekday {
+      text-align: center;
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-muted);
+      padding: 4px 0;
+    }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+    }
+
+    .cal-day {
+      aspect-ratio: 1;
+      background: var(--surface);
+      border: 2px solid transparent;
+      border-radius: var(--radius-sm);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: var(--transition);
+      min-width: 0;
+    }
+    .cal-day:hover:not(.empty):not(.other-month) {
+      border-color: var(--rose-lt);
+      background: var(--blush);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px var(--shadow);
+    }
+    .cal-day.other-month {
+      background: transparent;
+      color: #ccc;
+      cursor: default;
+    }
+    .cal-day.today .day-num {
+      background: var(--today-bg);
+      color: var(--today-fg);
+      border-radius: 50%;
+      width: 30px; height: 30px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700;
+    }
+    .cal-day.has-bookings {
+      background: var(--booked-bg);
+      border-color: var(--rose-lt);
+    }
+    .cal-day.selected {
+      border-color: var(--rose) !important;
+      background: var(--blush) !important;
+      box-shadow: 0 0 0 3px rgba(181,84,122,.18);
+    }
+    .day-num {
+      font-size: .95rem;
+      font-weight: 600;
+      line-height: 1;
+    }
+    .booking-dots {
+      display: flex;
+      gap: 3px;
+      margin-top: 5px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 36px;
+    }
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--booked-dot);
+    }
+    .dot-more { font-size: .6rem; color: var(--rose); font-weight: 700; }
+
+    .legend {
+      display: flex;
+      gap: 20px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: .8rem;
+      color: var(--text-muted);
+    }
+    .legend-swatch { width: 16px; height: 16px; border-radius: 4px; }
+
+    .side-panel {
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .side-header {
+      padding: 24px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, #fdf0f5 0%, #fff 100%);
+    }
+    .side-header .side-date {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2rem;
+      color: var(--rose);
+    }
+    .side-header .side-subtitle {
+      font-size: .82rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    .side-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text-muted);
+    }
+    .empty-state .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+    .empty-state p { font-size: .9rem; line-height: 1.6; }
+
+    .booking-card {
+      background: var(--rose-pale);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 12px;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+    .booking-card:hover { box-shadow: 0 4px 16px var(--shadow); }
+    .booking-card-img {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      display: block;
+    }
+    .booking-card-img-placeholder {
+      width: 100%;
+      height: 80px;
+      background: var(--blush);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      color: var(--rose-lt);
+    }
+    .booking-card-body { padding: 14px; }
+    .booking-card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .booking-card-type {
+      display: inline-block;
+      background: var(--blush);
+      color: var(--rose);
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      padding: 3px 8px;
+      border-radius: 20px;
+      margin: 6px 0;
+    }
+    .booking-meta { font-size: .8rem; color: var(--text-muted); margin-top: 6px; }
+    .booking-meta span { display: block; margin-top: 2px; }
+    .booking-meta .meta-icon { margin-right: 5px; }
+    .booking-card-actions {
+      display: flex;
+      gap: 8px;
+      padding: 10px 14px;
+      border-top: 1px solid var(--border);
+      background: #fff;
+    }
+    .btn-sm {
+      flex: 1;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: .78rem;
+      font-weight: 600;
+      font-family: 'Lato', sans-serif;
+      transition: var(--transition);
+    }
+    .btn-sm.delete { background: #fde8ee; color: #c0334e; }
+    .btn-sm.delete:hover { background: #f8b4c4; }
+    .btn-sm.view { background: var(--blush); color: var(--rose); }
+    .btn-sm.view:hover { background: var(--rose-lt); }
+
+    .add-btn-wrap {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+    }
+    .add-booking-btn {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, var(--rose) 0%, #9b3d6a 100%);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: 'Lato', sans-serif;
+      font-size: .92rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      letter-spacing: .04em;
+      transition: var(--transition);
+      box-shadow: 0 4px 14px rgba(181,84,122,.35);
+    }
+    .add-booking-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(181,84,122,.45);
+    }
+    .add-booking-btn .plus-icon {
+      width: 24px; height: 24px;
+      background: rgba(255,255,255,.22);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+      font-weight: 300;
+      line-height: 1;
+    }
+
+    .no-date-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      color: var(--text-muted);
+      padding: 40px 24px;
+      gap: 16px;
+    }
+    .no-date-state .icon { font-size: 3.5rem; }
+    .no-date-state h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2rem;
+      color: var(--text);
+    }
+    .no-date-state p { font-size: .88rem; line-height: 1.7; }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(45,27,46,.55);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .28s ease;
+    }
+    .modal-overlay.visible { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 540px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(45,27,46,.3);
+      transform: translateY(24px) scale(.97);
+      transition: transform .28s ease;
+    }
+    .modal-overlay.visible .modal { transform: translateY(0) scale(1); }
+
+    .modal-header {
+      padding: 24px 28px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+    .modal-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      color: var(--rose);
+    }
+    .modal-header .modal-subtitle { font-size: .82rem; color: var(--text-muted); margin-top: 3px; }
+    .modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.4rem;
+      color: var(--text-muted);
+      padding: 2px 6px;
+      border-radius: 6px;
+      line-height: 1;
+      transition: var(--transition);
+    }
+    .modal-close:hover { background: var(--blush); color: var(--rose); }
+
+    .modal-body { padding: 24px 28px; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-group { margin-bottom: 18px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label {
+      display: block;
+      font-size: .8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    label .required { color: var(--rose); }
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="date"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 11px 14px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: 'Lato', sans-serif;
+      font-size: .9rem;
+      color: var(--text);
+      background: var(--surface);
+      transition: border-color .18s;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--rose-lt);
+      box-shadow: 0 0 0 3px rgba(181,84,122,.1);
+    }
+    textarea { resize: vertical; min-height: 80px; }
+    select { cursor: pointer; }
+
+    .image-upload-zone {
+      border: 2px dashed var(--rose-lt);
+      border-radius: var(--radius-sm);
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      background: var(--rose-pale);
+      position: relative;
+    }
+    .image-upload-zone:hover, .image-upload-zone.drag-over {
+      border-color: var(--rose);
+      background: var(--blush);
+    }
+    .image-upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .upload-icon { font-size: 2rem; margin-bottom: 8px; color: var(--rose-lt); }
+    .upload-text { font-size: .85rem; color: var(--text-muted); }
+    .upload-text strong { color: var(--rose); }
+    .upload-preview { margin-top: 12px; position: relative; display: inline-block; }
+    .upload-preview img {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: var(--radius-sm);
+      object-fit: cover;
+      display: block;
+    }
+    .upload-preview-remove {
+      position: absolute;
+      top: -8px; right: -8px;
+      background: var(--rose);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 22px; height: 22px;
+      cursor: pointer;
+      font-size: .8rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .modal-footer {
+      padding: 16px 28px 24px;
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+    .btn {
+      padding: 11px 24px;
+      border-radius: var(--radius-sm);
+      font-family: 'Lato', sans-serif;
+      font-size: .9rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: var(--transition);
+    }
+    .btn-cancel {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--text-muted);
+    }
+    .btn-cancel:hover { border-color: var(--rose-lt); background: var(--rose-pale); }
+    .btn-save {
+      background: linear-gradient(135deg, var(--rose), #9b3d6a);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(181,84,122,.32);
+    }
+    .btn-save:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(181,84,122,.42); }
+    .btn-save:disabled { opacity: .6; pointer-events: none; }
+
+    .toast-container {
+      position: fixed;
+      bottom: 28px; right: 28px;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .toast {
+      background: #2d1b2e;
+      color: #fff;
+      padding: 13px 20px;
+      border-radius: var(--radius-sm);
+      font-size: .88rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,.2);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transform: translateX(120%);
+      transition: transform .3s ease;
+      max-width: 320px;
+    }
+    .toast.show { transform: translateX(0); }
+    .toast.success .toast-icon { color: #6ee7b7; }
+    .toast.error   .toast-icon { color: #fca5a5; }
+
+    .spinner {
+      width: 24px; height: 24px;
+      border: 3px solid var(--blush);
+      border-top-color: var(--rose);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-wrap { display: flex; align-items: center; justify-content: center; padding: 32px; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--rose-lt); border-radius: 3px; }
+
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; height: auto; }
+      .side-panel { border-left: none; border-top: 1px solid var(--border); max-height: 480px; }
+      .cal-panel { padding: 20px; }
+      header { padding: 16px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <header>
+    <div class="logo">💐</div>
+    <div>
+      <h1>Wedding Rental Bookings</h1>
+      <p>Manage your venue &amp; rental calendar with ease</p>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Calendar -->
+    <section class="cal-panel">
+      <div class="cal-header">
+        <h2 id="monthLabel">Month Year</h2>
+        <div class="nav-btns">
+          <button class="nav-btn" id="prevBtn" title="Previous month">&#8249;</button>
+          <button class="nav-btn" id="todayBtn" title="Go to today" style="font-size:.7rem;font-weight:700;width:50px;border-radius:20px;">TODAY</button>
+          <button class="nav-btn" id="nextBtn" title="Next month">&#8250;</button>
+        </div>
+      </div>
+
+      <div class="weekdays">
+        <div class="weekday">Sun</div><div class="weekday">Mon</div>
+        <div class="weekday">Tue</div><div class="weekday">Wed</div>
+        <div class="weekday">Thu</div><div class="weekday">Fri</div>
+        <div class="weekday">Sat</div>
+      </div>
+
+      <div class="cal-grid" id="calGrid"></div>
+
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:var(--booked-bg);border:1px solid var(--rose-lt);"></div>
+          Has bookings
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:var(--today-bg);border-radius:50%;"></div>
+          Today
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:var(--blush);border:2px solid var(--rose);"></div>
+          Selected
+        </div>
+      </div>
+    </section>
+
+    <!-- Side Panel -->
+    <aside class="side-panel" id="sidePanel">
+
+      <div class="no-date-state" id="noDateState">
+        <div class="icon">📅</div>
+        <h3>Select a Date</h3>
+        <p>Click any day on the calendar to view bookings or add a new one for your wedding rental business.</p>
+      </div>
+
+      <div class="side-header" id="sideHeader" style="display:none;">
+        <div class="side-date" id="sideDateLabel"></div>
+        <div class="side-subtitle" id="sideSubtitle"></div>
+      </div>
+
+      <div class="side-content" id="sideContent" style="display:none;"></div>
+
+      <div class="add-btn-wrap" id="addBtnWrap" style="display:none;">
+        <button class="add-booking-btn" id="openAddModalBtn">
+          <span class="plus-icon">+</span>
+          Add New Booking
+        </button>
+      </div>
+
+    </aside>
+  </main>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+
+    <div class="modal-header">
+      <div>
+        <h2 id="modalTitle">New Booking</h2>
+        <div class="modal-subtitle" id="modalSubtitle"></div>
+      </div>
+      <button class="modal-close" id="closeModalBtn" title="Close">&times;</button>
+    </div>
+
+    <form id="bookingForm" enctype="multipart/form-data">
+      <input type="hidden" id="editBookingId" />
+
+      <div class="modal-body">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Client Name <span class="required">*</span></label>
+            <input type="text" id="fClientName" placeholder="e.g. Sarah & James" required />
+          </div>
+          <div class="form-group">
+            <label>Event Type <span class="required">*</span></label>
+            <select id="fEventType" required>
+              <option value="">— Select —</option>
+              <option>Wedding Ceremony</option>
+              <option>Wedding Reception</option>
+              <option>Engagement Party</option>
+              <option>Bridal Shower</option>
+              <option>Rehearsal Dinner</option>
+              <option>Anniversary Celebration</option>
+              <option>Corporate Event</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Start Date <span class="required">*</span></label>
+            <input type="date" id="fStartDate" required />
+          </div>
+          <div class="form-group">
+            <label>Return / End Date <span class="required">*</span></label>
+            <input type="date" id="fEndDate" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Contact Email</label>
+            <input type="email" id="fEmail" placeholder="client@email.com" />
+          </div>
+          <div class="form-group">
+            <label>Contact Phone</label>
+            <input type="tel" id="fPhone" placeholder="+1 555 000 0000" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea id="fNotes" placeholder="Decoration preferences, special requirements, package details…"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Event / Inspiration Photo</label>
+          <div class="image-upload-zone" id="uploadZone">
+            <input type="file" id="fImage" accept="image/*" />
+            <div class="upload-icon">🖼️</div>
+            <div class="upload-text">
+              <strong>Click to upload</strong> or drag &amp; drop<br>
+              <span style="font-size:.75rem;">JPG, PNG, GIF, WEBP — max 15 MB</span>
+            </div>
+          </div>
+          <div class="upload-preview" id="uploadPreview" style="display:none;">
+            <img id="previewImg" src="" alt="Preview" />
+            <button type="button" class="upload-preview-remove" id="removeImageBtn" title="Remove image">&times;</button>
+          </div>
+          <div id="existingImageWrap" style="display:none;margin-top:10px;">
+            <img id="existingImg" src="" alt="Current image" style="max-height:120px;border-radius:8px;" />
+            <p style="font-size:.75rem;color:var(--text-muted);margin-top:5px;">Upload a new photo above to replace this one.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-cancel" id="cancelModalBtn">Cancel</button>
+        <button type="submit" class="btn btn-save" id="saveBtn">💐 Save Booking</button>
+      </div>
+    </form>
+
+  </div>
+</div>
+
+<script>
+let currentYear  = new Date().getFullYear();
+let currentMonth = new Date().getMonth();
+let selectedDate = null;
+let bookedDates  = {};
+
+const pad = n => String(n).padStart(2, '0');
+const toISO = (y, m, d) => `${y}-${pad(m+1)}-${pad(d)}`;
+
+function formatDateFull(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+}
+function formatDateShort(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  });
+}
+
+async function fetchBookedDates() {
+  const res = await fetch('/api/bookings/booked-dates');
+  bookedDates = await res.json();
+}
+async function fetchBookingsForDate(dateISO) {
+  const res = await fetch(`/api/bookings/date/${dateISO}`);
+  return res.json();
+}
+async function deleteBooking(id) {
+  const res = await fetch(`/api/bookings/${id}`, { method: 'DELETE' });
+  return res.json();
+}
+
+function showToast(msg, type = 'success') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<span class="toast-icon">${type === 'success' ? '✓' : '✕'}</span> ${msg}`;
+  container.appendChild(toast);
+  requestAnimationFrame(() => { requestAnimationFrame(() => { toast.classList.add('show'); }); });
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 350);
+  }, 3200);
+}
+
+function renderCalendar() {
+  const grid  = document.getElementById('calGrid');
+  const label = document.getElementById('monthLabel');
+
+  label.textContent = new Date(currentYear, currentMonth, 1)
+    .toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  const firstDow  = new Date(currentYear, currentMonth, 1).getDay();
+  const daysCount = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const prevCount = new Date(currentYear, currentMonth,     0).getDate();
+
+  const today    = new Date();
+  const todayISO = toISO(today.getFullYear(), today.getMonth(), today.getDate());
+
+  grid.innerHTML = '';
+
+  for (let i = firstDow - 1; i >= 0; i--) {
+    const cell = document.createElement('div');
+    cell.className = 'cal-day other-month';
+    cell.innerHTML = `<span class="day-num">${prevCount - i}</span>`;
+    grid.appendChild(cell);
+  }
+
+  for (let d = 1; d <= daysCount; d++) {
+    const iso  = toISO(currentYear, currentMonth, d);
+    const cell = document.createElement('div');
+    cell.className = 'cal-day';
+    cell.dataset.date = iso;
+
+    const count = bookedDates[iso] || 0;
+    if (count)          cell.classList.add('has-bookings');
+    if (iso === todayISO)    cell.classList.add('today');
+    if (iso === selectedDate) cell.classList.add('selected');
+
+    const dotsHtml = count
+      ? `<div class="booking-dots">${
+          Array.from({ length: Math.min(count, 3) }, () => '<span class="dot"></span>').join('')
+          + (count > 3 ? `<span class="dot-more">+${count-3}</span>` : '')
+        }</div>`
+      : '';
+
+    cell.innerHTML = `<span class="day-num">${d}</span>${dotsHtml}`;
+    cell.addEventListener('click', () => selectDate(iso));
+    grid.appendChild(cell);
+  }
+
+  const total    = firstDow + daysCount;
+  const trailing = total % 7 === 0 ? 0 : 7 - (total % 7);
+  for (let d = 1; d <= trailing; d++) {
+    const cell = document.createElement('div');
+    cell.className = 'cal-day other-month';
+    cell.innerHTML = `<span class="day-num">${d}</span>`;
+    grid.appendChild(cell);
+  }
+}
+
+async function selectDate(iso) {
+  selectedDate = iso;
+  renderCalendar();
+
+  document.getElementById('noDateState').style.display  = 'none';
+  document.getElementById('sideHeader').style.display   = 'block';
+  document.getElementById('sideContent').style.display  = 'block';
+  document.getElementById('addBtnWrap').style.display   = 'block';
+  document.getElementById('sideDateLabel').textContent  = formatDateFull(iso);
+
+  const content = document.getElementById('sideContent');
+  content.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
+
+  const bookings = await fetchBookingsForDate(iso);
+  document.getElementById('sideSubtitle').textContent = bookings.length === 0
+    ? 'No bookings yet'
+    : `${bookings.length} booking${bookings.length > 1 ? 's' : ''}`;
+
+  renderBookingsList(bookings, content);
+}
+
+function renderBookingsList(bookings, container) {
+  if (bookings.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">💍</div>
+        <p>No bookings for this date yet.<br>Click <strong>Add New Booking</strong> below to get started.</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = '';
+  bookings.forEach(b => {
+    const card = document.createElement('div');
+    card.className = 'booking-card';
+
+    const imgSection = b.imageUrl
+      ? `<img class="booking-card-img" src="${b.imageUrl}" alt="${b.clientName}" />`
+      : `<div class="booking-card-img-placeholder">💐</div>`;
+
+    const sameDayStr = b.startDate === b.endDate
+      ? formatDateShort(b.startDate)
+      : `${formatDateShort(b.startDate)} → ${formatDateShort(b.endDate)}`;
+
+    card.innerHTML = `
+      ${imgSection}
+      <div class="booking-card-body">
+        <div class="booking-card-title">${escHtml(b.clientName)}</div>
+        <span class="booking-card-type">${escHtml(b.eventType)}</span>
+        <div class="booking-meta">
+          <span><span class="meta-icon">📅</span>${sameDayStr}</span>
+          ${b.contactEmail ? `<span><span class="meta-icon">✉️</span>${escHtml(b.contactEmail)}</span>` : ''}
+          ${b.contactPhone ? `<span><span class="meta-icon">📞</span>${escHtml(b.contactPhone)}</span>` : ''}
+          ${b.notes ? `<span><span class="meta-icon">📝</span>${escHtml(b.notes.substring(0,80))}${b.notes.length>80?'…':''}</span>` : ''}
+        </div>
+      </div>
+      <div class="booking-card-actions">
+        <button class="btn-sm view"   onclick="openEditModal('${b.id}')">✏️ Edit</button>
+        <button class="btn-sm delete" onclick="confirmDelete('${b.id}', '${escHtml(b.clientName)}')">🗑️ Delete</button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function confirmDelete(id, name) {
+  if (!confirm(`Delete the booking for "${name}"? This cannot be undone.`)) return;
+  try {
+    await deleteBooking(id);
+    showToast('Booking deleted.', 'success');
+    await fetchBookedDates();
+    renderCalendar();
+    if (selectedDate) selectDate(selectedDate);
+  } catch {
+    showToast('Could not delete booking.', 'error');
+  }
+}
+
+const overlay   = document.getElementById('modalOverlay');
+const form      = document.getElementById('bookingForm');
+const editIdFld = document.getElementById('editBookingId');
+
+function openAddModal() {
+  editIdFld.value = '';
+  form.reset();
+  clearImagePreview();
+  document.getElementById('existingImageWrap').style.display = 'none';
+  if (selectedDate) {
+    document.getElementById('fStartDate').value = selectedDate;
+    document.getElementById('fEndDate').value   = selectedDate;
+  }
+  document.getElementById('modalTitle').textContent    = 'New Booking';
+  document.getElementById('modalSubtitle').textContent = selectedDate ? `For ${formatDateFull(selectedDate)}` : '';
+  document.getElementById('saveBtn').textContent       = '💐 Save Booking';
+  overlay.classList.add('visible');
+  document.getElementById('fClientName').focus();
+}
+
+async function openEditModal(id) {
+  try {
+    const res = await fetch(`/api/bookings/${id}`);
+    const b   = await res.json();
+    editIdFld.value = id;
+    document.getElementById('fClientName').value = b.clientName;
+    document.getElementById('fEventType').value  = b.eventType;
+    document.getElementById('fStartDate').value  = b.startDate;
+    document.getElementById('fEndDate').value    = b.endDate;
+    document.getElementById('fEmail').value      = b.contactEmail || '';
+    document.getElementById('fPhone').value      = b.contactPhone || '';
+    document.getElementById('fNotes').value      = b.notes || '';
+    clearImagePreview();
+    if (b.imageUrl) {
+      document.getElementById('existingImg').src             = b.imageUrl;
+      document.getElementById('existingImageWrap').style.display = 'block';
+    } else {
+      document.getElementById('existingImageWrap').style.display = 'none';
+    }
+    document.getElementById('modalTitle').textContent    = 'Edit Booking';
+    document.getElementById('modalSubtitle').textContent = `${b.clientName} · ${b.eventType}`;
+    document.getElementById('saveBtn').textContent       = '💾 Update Booking';
+    overlay.classList.add('visible');
+  } catch {
+    showToast('Could not load booking details.', 'error');
+  }
+}
+
+function closeModal() { overlay.classList.remove('visible'); }
+
+function clearImagePreview() {
+  document.getElementById('uploadPreview').style.display = 'none';
+  document.getElementById('previewImg').src = '';
+  document.getElementById('fImage').value  = '';
+  document.getElementById('uploadZone').style.display = 'block';
+}
+
+document.getElementById('fImage').addEventListener('change', function () {
+  const file = this.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('previewImg').src              = e.target.result;
+    document.getElementById('uploadPreview').style.display = 'inline-block';
+    document.getElementById('uploadZone').style.display    = 'none';
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('removeImageBtn').addEventListener('click', clearImagePreview);
+
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) {
+    document.getElementById('fImage').files = e.dataTransfer.files;
+    document.getElementById('fImage').dispatchEvent(new Event('change'));
+  }
+});
+
+form.addEventListener('submit', async function (e) {
+  e.preventDefault();
+  const saveBtn = document.getElementById('saveBtn');
+  saveBtn.disabled    = true;
+  saveBtn.textContent = 'Saving…';
+
+  const fd = new FormData();
+  fd.append('clientName',   document.getElementById('fClientName').value.trim());
+  fd.append('eventType',    document.getElementById('fEventType').value);
+  fd.append('startDate',    document.getElementById('fStartDate').value);
+  fd.append('endDate',      document.getElementById('fEndDate').value);
+  fd.append('contactEmail', document.getElementById('fEmail').value.trim());
+  fd.append('contactPhone', document.getElementById('fPhone').value.trim());
+  fd.append('notes',        document.getElementById('fNotes').value.trim());
+
+  const imageFile = document.getElementById('fImage').files[0];
+  if (imageFile) fd.append('image', imageFile);
+
+  const id     = editIdFld.value;
+  const url    = id ? `/api/bookings/${id}` : '/api/bookings';
+  const method = id ? 'PUT' : 'POST';
+
+  try {
+    const res  = await fetch(url, { method, body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Server error');
+    showToast(id ? 'Booking updated!' : 'Booking saved!', 'success');
+    closeModal();
+    await fetchBookedDates();
+    renderCalendar();
+    if (selectedDate) selectDate(selectedDate);
+  } catch (err) {
+    showToast(err.message || 'Could not save booking.', 'error');
+  } finally {
+    saveBtn.disabled    = false;
+    saveBtn.textContent = id ? '💾 Update Booking' : '💐 Save Booking';
+  }
+});
+
+document.getElementById('prevBtn').addEventListener('click', () => {
+  currentMonth--;
+  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+  renderCalendar();
+});
+document.getElementById('nextBtn').addEventListener('click', () => {
+  currentMonth++;
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  renderCalendar();
+});
+document.getElementById('todayBtn').addEventListener('click', () => {
+  const today  = new Date();
+  currentYear  = today.getFullYear();
+  currentMonth = today.getMonth();
+  selectedDate = toISO(currentYear, currentMonth, today.getDate());
+  renderCalendar();
+  selectDate(selectedDate);
+});
+
+document.getElementById('openAddModalBtn').addEventListener('click', openAddModal);
+document.getElementById('closeModalBtn').addEventListener('click',  closeModal);
+document.getElementById('cancelModalBtn').addEventListener('click', closeModal);
+overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+(async function init() {
+  await fetchBookedDates();
+  renderCalendar();
+})();
+</script>
+</body>
+</html>

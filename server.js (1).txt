@@ -1,0 +1,201 @@
+const express = require('express');
+const multer  = require('multer');
+const path    = require('path');
+const fs      = require('fs');
+const { v4: uuidv4 } = require('uuid');
+
+const app  = express();
+const PORT = 3000;
+
+// ─── Ensure required directories exist ────────────────────────────────────────
+const DATA_DIR    = path.join(__dirname, 'data');
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+const PUBLIC_DIR  = path.join(__dirname, 'public');
+const DB_FILE     = path.join(DATA_DIR, 'bookings.json');
+
+[DATA_DIR, UPLOADS_DIR, PUBLIC_DIR].forEach(dir => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
+
+if (!fs.existsSync(DB_FILE)) {
+  fs.writeFileSync(DB_FILE, JSON.stringify([], null, 2));
+}
+
+// ─── Multer – image upload storage ────────────────────────────────────────────
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
+  filename:    (_req,  file, cb) => {
+    const ext    = path.extname(file.originalname).toLowerCase();
+    const unique = `${Date.now()}-${uuidv4()}${ext}`;
+    cb(null, unique);
+  }
+});
+
+const fileFilter = (_req, file, cb) => {
+  const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (allowed.includes(ext)) cb(null, true);
+  else cb(new Error('Only image files are allowed (jpg, png, gif, webp)'), false);
+};
+
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 15 * 1024 * 1024 }
+});
+
+// ─── Middleware ────────────────────────────────────────────────────────────────
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(PUBLIC_DIR));
+app.use('/uploads', express.static(UPLOADS_DIR));
+
+// ─── DB helpers ───────────────────────────────────────────────────────────────
+function readBookings() {
+  try {
+    return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+  } catch {
+    return [];
+  }
+}
+
+function writeBookings(bookings) {
+  fs.writeFileSync(DB_FILE, JSON.stringify(bookings, null, 2));
+}
+
+function spannedDates(booking) {
+  const dates = [];
+  const start = new Date(booking.startDate + 'T00:00:00');
+  const end   = new Date(booking.endDate   + 'T00:00:00');
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    dates.push(cursor.toISOString().split('T')[0]);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return dates;
+}
+
+// ─── API Routes ───────────────────────────────────────────────────────────────
+
+// GET /api/bookings — all bookings
+app.get('/api/bookings', (_req, res) => {
+  res.json(readBookings());
+});
+
+// GET /api/bookings/booked-dates — { "YYYY-MM-DD": count }
+app.get('/api/bookings/booked-dates', (_req, res) => {
+  const bookings = readBookings();
+  const counts   = {};
+  bookings.forEach(b => {
+    spannedDates(b).forEach(d => {
+      counts[d] = (counts[d] || 0) + 1;
+    });
+  });
+  res.json(counts);
+});
+
+// GET /api/bookings/date/:date — bookings spanning a given date
+app.get('/api/bookings/date/:date', (req, res) => {
+  const target   = req.params.date;
+  const bookings = readBookings();
+  const results  = bookings.filter(b => spannedDates(b).includes(target));
+  res.json(results);
+});
+
+// GET /api/bookings/:id — single booking
+app.get('/api/bookings/:id', (req, res) => {
+  const booking = readBookings().find(b => b.id === req.params.id);
+  if (!booking) return res.status(404).json({ error: 'Booking not found' });
+  res.json(booking);
+});
+
+// POST /api/bookings — create booking
+app.post('/api/bookings', upload.single('image'), (req, res) => {
+  const { clientName, eventType, startDate, endDate, contactEmail, contactPhone, notes } = req.body;
+
+  if (!clientName || !eventType || !startDate || !endDate) {
+    return res.status(400).json({ error: 'clientName, eventType, startDate, and endDate are required.' });
+  }
+  if (new Date(startDate) > new Date(endDate)) {
+    return res.status(400).json({ error: 'startDate must not be after endDate.' });
+  }
+
+  const newBooking = {
+    id:           uuidv4(),
+    clientName:   clientName.trim(),
+    eventType:    eventType.trim(),
+    startDate,
+    endDate,
+    contactEmail: contactEmail ? contactEmail.trim() : '',
+    contactPhone: contactPhone ? contactPhone.trim() : '',
+    notes:        notes        ? notes.trim()        : '',
+    imageUrl:     req.file ? `/uploads/${req.file.filename}` : null,
+    createdAt:    new Date().toISOString()
+  };
+
+  const bookings = readBookings();
+  bookings.push(newBooking);
+  writeBookings(bookings);
+  res.status(201).json(newBooking);
+});
+
+// PUT /api/bookings/:id — update booking
+app.put('/api/bookings/:id', upload.single('image'), (req, res) => {
+  const bookings = readBookings();
+  const index    = bookings.findIndex(b => b.id === req.params.id);
+  if (index === -1) return res.status(404).json({ error: 'Booking not found' });
+
+  const existing = bookings[index];
+  const updated  = {
+    ...existing,
+    clientName:   req.body.clientName   ? req.body.clientName.trim()   : existing.clientName,
+    eventType:    req.body.eventType    ? req.body.eventType.trim()    : existing.eventType,
+    startDate:    req.body.startDate    || existing.startDate,
+    endDate:      req.body.endDate      || existing.endDate,
+    contactEmail: req.body.contactEmail !== undefined ? req.body.contactEmail.trim() : existing.contactEmail,
+    contactPhone: req.body.contactPhone !== undefined ? req.body.contactPhone.trim() : existing.contactPhone,
+    notes:        req.body.notes        !== undefined ? req.body.notes.trim()        : existing.notes,
+    updatedAt:    new Date().toISOString()
+  };
+
+  if (req.file) {
+    if (existing.imageUrl) {
+      const oldPath = path.join(__dirname, existing.imageUrl);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+    updated.imageUrl = `/uploads/${req.file.filename}`;
+  }
+
+  bookings[index] = updated;
+  writeBookings(bookings);
+  res.json(updated);
+});
+
+// DELETE /api/bookings/:id — delete booking + image
+app.delete('/api/bookings/:id', (req, res) => {
+  const bookings = readBookings();
+  const index    = bookings.findIndex(b => b.id === req.params.id);
+  if (index === -1) return res.status(404).json({ error: 'Booking not found' });
+
+  const booking = bookings[index];
+  if (booking.imageUrl) {
+    const imgPath = path.join(__dirname, booking.imageUrl);
+    if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
+  }
+
+  bookings.splice(index, 1);
+  writeBookings(bookings);
+  res.json({ success: true, id: req.params.id });
+});
+
+// ─── Global error handler ─────────────────────────────────────────────────────
+app.use((err, _req, res, _next) => {
+  console.error(err);
+  res.status(500).json({ error: err.message || 'Internal server error' });
+});
+
+// ─── Start ────────────────────────────────────────────────────────────────────
+app.listen(PORT, () => {
+  console.log(`\n💐 Wedding Booking Server is running`);
+  console.log(`   → http://localhost:${PORT}\n`);
+});
