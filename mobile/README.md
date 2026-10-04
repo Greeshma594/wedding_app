@@ -55,7 +55,7 @@ Fill in `.env`:
 | `EXPO_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API |
 | `EXPO_PUBLIC_SUPABASE_KEY` | Supabase → Project Settings → API Keys → publishable key (never the secret key) |
 | `EXPO_PUBLIC_SHOP_NAME` | Your shop name, shown on the home screen and receipts |
-| `EXPO_PUBLIC_GOOGLE_REVIEW_URL` | Google Business Profile → Ask for reviews → copy the link |
+| `EXPO_PUBLIC_GOOGLE_REVIEW_URL` | Optional. The app already uses the shop's link, https://share.google/VEFZb3MdFuhjqTyJC |
 | `EXPO_PUBLIC_CURRENCY_SYMBOL` | Defaults to ₹ |
 
 ### 3. Run it on your phone

@@ -11,7 +11,7 @@ export function ReviewButton() {
 
   const open = async () => {
     if (!config.googleReviewUrl) {
-      setError('Add the Google review link as EXPO_PUBLIC_GOOGLE_REVIEW_URL in the app settings.');
+      setError('The Google review link is missing. Add it as EXPO_PUBLIC_GOOGLE_REVIEW_URL in the app settings.');
       return;
     }
     try {
