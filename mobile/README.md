@@ -5,11 +5,15 @@ Staff app for a wedding dress rental shop, for Android and iOS. Built with Expo 
 ## What it does
 
 - **Home**: Wedding Wear and Wedding Guests sections, plus a one-tap "Review us on Google" button.
-- **Catalogue**: a photo grid per section. Staff add a dress with a photo, and it appears straight away.
+- **Catalogue**: a photo grid per section, with search, tag filters (e.g. red, green, silk) and a price range
+  at the top. Staff add a dress with a photo, a name, rental price, size and tags. It gets the next code
+  automatically (WW-001… for Wedding Wear, WG-001… for Wedding Guests) and appears straight away.
+  Name, price, size, tags and notes can be edited later; the code never changes.
   Photos are compressed on the phone before upload: the longest side is resized to 1600 px at 78% quality
   (about 200–300 KB), and a 400 px thumbnail is made for the grid.
-- **New booking**: dress, customer name and phone, body measurements, custom changes requested,
-  rental dates, return date, total price, amount collected, balance due (calculated), notes,
+- **New booking**: dress (pick from the catalogue, or add a new one with the camera, which also goes into the
+  catalogue), customer name and phone, body measurements, custom changes requested,
+  rental dates, return date, total price (filled in from the dress's rental price), amount collected, balance due (calculated), notes,
   and the customer's typed name as their signature.
 - **Check a date**: a calendar showing how many dresses are blocked each day, the blocked dresses for the
   chosen date (rented, overdue or cleaning day) and the free ones, which can be booked from there.
@@ -30,9 +34,10 @@ The rule lives in `src/lib/blocking.ts` and `booking_blocked_until()` in the mig
 ### 1. Supabase (free plan, no card)
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. Open **SQL Editor**, paste the contents of `../supabase/migrations/20261004000000_init.sql` and run it.
-   This creates the tables, the double-booking check, staff-only access rules, the `dresses` photo bucket
-   and live sync.
+2. Open **SQL Editor** and run each file in `../supabase/migrations/` in order (paste its contents, then Run):
+   - `20261004000000_init.sql`: tables, the double-booking check, staff-only access, the `dresses` photo
+     bucket and live sync.
+   - `20261005000000_dress_codes_tags_price.sql`: automatic dress codes, tags and rental price.
 3. In **Authentication → Sign In / Providers**, turn off **Allow new users to sign up**, so only staff
    accounts you create can sign in.
 4. In **Authentication → Users**, use **Add user** to create an email and password for each staff member.
@@ -70,7 +75,7 @@ To make installable builds for the Play Store and App Store later, use EAS:
 
 ```bash
 npm run typecheck   # TypeScript
-npm test            # unit tests for the blocking rule, dates, money, photo sizes and receipt
+npm test            # unit tests for the blocking rule, catalogue filters, dates, money, photo sizes and receipt
 ```
 
 Screens are in `src/app` (Expo Router), shared UI in `src/components`, and logic and data access in `src/lib`.
@@ -78,7 +83,7 @@ Screens are in `src/app` (Expo Router), shared UI in `src/components`, and logic
 ## Not built yet
 
 - Editing a booking's dates or customer details after saving (cancel and re-create for now).
-- Editing or removing a dress from the catalogue.
+- Replacing a dress photo, or removing a dress from the catalogue.
 - Working offline: the app needs an internet connection to save bookings.
 - Automatic backups: the Supabase free plan has none, so export the bookings and dresses tables
   regularly (Table Editor → Export to CSV).

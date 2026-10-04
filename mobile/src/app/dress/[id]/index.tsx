@@ -1,14 +1,16 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { DressPhoto } from '../../components/dress';
-import { Button, Card, Loading, Message, Row, Screen, SectionTitle, StatusPill } from '../../components/ui';
-import { getDress, listBookingsForDress } from '../../lib/api';
-import { bookingState } from '../../lib/blocking';
-import { formatShortDate, todayISO } from '../../lib/dates';
-import { SECTIONS } from '../../lib/types';
-import { useLoader } from '../../lib/useLoader';
-import { colors, radius, space, type } from '../../theme';
+import { DressPhoto } from '../../../components/dress';
+import { TagChip } from '../../../components/TagInput';
+import { Button, Card, Loading, Message, Row, Screen, SectionTitle, StatusPill } from '../../../components/ui';
+import { getDress, listBookingsForDress } from '../../../lib/api';
+import { bookingState } from '../../../lib/blocking';
+import { formatShortDate, todayISO } from '../../../lib/dates';
+import { formatMoney } from '../../../lib/format';
+import { SECTIONS } from '../../../lib/types';
+import { useLoader } from '../../../lib/useLoader';
+import { colors, radius, space, type } from '../../../theme';
 
 export default function DressScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -32,10 +34,18 @@ export default function DressScreen() {
       </View>
       <Card>
         <Row label="Section" value={SECTIONS[dress.section].title} />
+        <Row label="Rental price" value={dress.price === null ? 'Not set' : formatMoney(dress.price)} />
         {dress.size ? <Row label="Size" value={dress.size} /> : null}
-        {dress.colour ? <Row label="Colour" value={dress.colour} /> : null}
+        {dress.tags.length > 0 ? (
+          <View style={styles.tags}>
+            {dress.tags.map((t) => (
+              <TagChip key={t} label={t} />
+            ))}
+          </View>
+        ) : null}
         {dress.notes ? <Text style={type.body}>{dress.notes}</Text> : null}
       </Card>
+      <Button label="Edit name, price or tags" variant="secondary" onPress={() => router.push(`/dress/${dress.id}/edit`)} />
       <Button
         label="Book this dress"
         onPress={() =>
@@ -66,6 +76,7 @@ export default function DressScreen() {
 
 const styles = StyleSheet.create({
   photo: { width: '100%', aspectRatio: 3 / 4, maxHeight: 520, borderRadius: radius.lg },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   code: { fontSize: 13, fontWeight: '700', color: colors.accent },
   booking: {
     flexDirection: 'row',

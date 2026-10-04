@@ -3,13 +3,15 @@ import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DateField } from '../../components/Calendar';
+import { NewDressForm } from '../../components/DressForm';
 import { DressGrid, DressPhoto } from '../../components/dress';
 import { Button, Card, Field, Message, Row, Screen, SectionTitle } from '../../components/ui';
 import { createBooking, getDress, listDresses } from '../../lib/api';
 import { balanceDue, validateBookingDraft } from '../../lib/blocking';
+import { collectTags } from '../../lib/catalogue';
 import { addDays, isValidISODate, todayISO, type ISODate } from '../../lib/dates';
 import { formatMoney, parseAmount } from '../../lib/format';
-import type { Dress } from '../../lib/types';
+import { SECTIONS, type Dress } from '../../lib/types';
 import { useSection } from '../../lib/useSection';
 import { colors, radius, space, type } from '../../theme';
 
@@ -19,7 +21,7 @@ export default function NewBookingScreen() {
   const today = todayISO();
 
   const [dress, setDress] = useState<Dress | null>(null);
-  const [picking, setPicking] = useState(false);
+  const [picking, setPicking] = useState<'choose' | 'add' | null>(null);
   const [catalogue, setCatalogue] = useState<Dress[] | null>(null);
 
   const [customerName, setCustomerName] = useState('');
@@ -38,12 +40,18 @@ export default function NewBookingScreen() {
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
+  // Picking a dress fills in its rental price, if the price box is still empty.
+  const selectDress = (d: Dress) => {
+    setDress(d);
+    setTotal((current) => (current.trim() === '' && d.price !== null ? String(d.price) : current));
+  };
+
   useEffect(() => {
-    if (params.dressId) getDress(params.dressId).then(setDress).catch(() => setDress(null));
+    if (params.dressId) getDress(params.dressId).then(selectDress).catch(() => setDress(null));
   }, [params.dressId]);
 
   const openPicker = async () => {
-    setPicking(true);
+    setPicking('choose');
     try {
       setCatalogue(await listDresses(section));
     } catch {
@@ -190,26 +198,46 @@ export default function NewBookingScreen() {
       {errors.length > 0 ? <Message>{errors.join('\n')}</Message> : null}
       <Button label="Save booking" onPress={save} loading={saving} />
 
-      <Modal visible={picking} animationType="slide" onRequestClose={() => setPicking(false)}>
+      <Modal visible={picking !== null} animationType="slide" onRequestClose={() => setPicking(null)}>
         <View style={styles.modal}>
           <View style={styles.modalHeader}>
-            <Text style={type.heading}>Choose a dress</Text>
-            <Button label="Close" variant="ghost" onPress={() => setPicking(false)} />
+            <Text style={type.heading}>{picking === 'add' ? 'Add new dress' : 'Choose a dress'}</Text>
+            <Button label="Close" variant="ghost" onPress={() => setPicking(null)} />
           </View>
-          <ScrollView contentContainerStyle={{ padding: space.lg, gap: space.md }}>
-            {catalogue === null ? <Text style={type.small}>Loading catalogue…</Text> : null}
-            {catalogue?.length === 0 ? (
-              <Message tone="info">No dresses in this section yet. Add one from the catalogue first.</Message>
-            ) : null}
-            {catalogue ? (
-              <DressGrid
-                dresses={catalogue}
-                onPress={(d) => {
-                  setDress(d);
-                  setPicking(false);
+          <ScrollView
+            contentContainerStyle={{ padding: space.lg, gap: space.md, paddingBottom: space.xxl * 2 }}
+            keyboardShouldPersistTaps="handled">
+            {picking === 'add' ? (
+              <NewDressForm
+                section={section}
+                tagSuggestions={collectTags(catalogue ?? [])}
+                saveLabel="Save dress and use it"
+                onSaved={(d) => {
+                  selectDress(d);
+                  setPicking(null);
                 }}
               />
-            ) : null}
+            ) : (
+              <>
+                <Button label="+ Add new dress" variant="secondary" onPress={() => setPicking('add')} />
+                <Text style={type.small}>
+                  A new dress goes into the {SECTIONS[section].title} catalogue with its own code.
+                </Text>
+                {catalogue === null ? <Text style={type.small}>Loading catalogue…</Text> : null}
+                {catalogue?.length === 0 ? (
+                  <Message tone="info">No dresses in this section yet. Add the first one above.</Message>
+                ) : null}
+                {catalogue ? (
+                  <DressGrid
+                    dresses={catalogue}
+                    onPress={(d) => {
+                      selectDress(d);
+                      setPicking(null);
+                    }}
+                  />
+                ) : null}
+              </>
+            )}
           </ScrollView>
         </View>
       </Modal>

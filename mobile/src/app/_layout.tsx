@@ -29,7 +29,8 @@ function RootStack() {
         <Stack.Screen name="[section]/new-booking" options={{ title: 'New booking' }} />
         <Stack.Screen name="[section]/availability" options={{ title: 'Check a date' }} />
         <Stack.Screen name="[section]/bookings" options={{ title: 'Bookings' }} />
-        <Stack.Screen name="dress/[id]" options={{ title: 'Dress' }} />
+        <Stack.Screen name="dress/[id]/index" options={{ title: 'Dress' }} />
+        <Stack.Screen name="dress/[id]/edit" options={{ title: 'Edit dress' }} />
         <Stack.Screen name="booking/[id]" options={{ title: 'Booking' }} />
       </Stack.Protected>
     </Stack>

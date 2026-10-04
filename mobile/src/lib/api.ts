@@ -11,6 +11,10 @@ function fail(error: { message: string } | null, fallback: string): never {
   throw new Error(error?.message || fallback);
 }
 
+function toDress(row: Dress): Dress {
+  return { ...row, price: row.price === null ? null : Number(row.price), tags: row.tags ?? [] };
+}
+
 function toBooking<T extends Booking>(row: T): T {
   return {
     ...row,
@@ -18,6 +22,10 @@ function toBooking<T extends Booking>(row: T): T {
     amount_collected: Number(row.amount_collected),
     balance_due: Number(row.balance_due),
   };
+}
+
+function toBookingWithDress(row: BookingWithDress): BookingWithDress {
+  return { ...toBooking(row), dress: toDress(row.dress) };
 }
 
 // ─── Photos ───────────────────────────────────────────────────────────────────
@@ -49,22 +57,26 @@ export async function listDresses(section: Section): Promise<Dress[]> {
     .eq('section', section)
     .order('created_at', { ascending: false });
   if (error) fail(error, 'Could not load the catalogue.');
-  return data as Dress[];
+  return (data as Dress[]).map(toDress);
 }
 
 export async function getDress(id: string): Promise<Dress> {
   const { data, error } = await supabase.from('dresses').select('*').eq('id', id).single();
   if (error) fail(error, 'Could not load this dress.');
-  return data as Dress;
+  return toDress(data as Dress);
 }
 
-export interface NewDress {
-  section: Section;
-  code: string;
+/** The details staff can set and edit. The code is given by the database. */
+export interface DressDetails {
   name: string;
   size: string | null;
-  colour: string | null;
+  price: number | null;
+  tags: string[];
   notes: string | null;
+}
+
+export interface NewDress extends DressDetails {
+  section: Section;
 }
 
 /**
@@ -81,10 +93,7 @@ export async function createDress(
 
   onStep('Saving dress…');
   const { data: dress, error } = await supabase.from('dresses').insert(input).select('*').single();
-  if (error) {
-    if (error.code === '23505') throw new Error(`A dress with code ${input.code} already exists in this section.`);
-    fail(error, 'Could not save the dress.');
-  }
+  if (error) fail(error, 'Could not save the dress.');
 
   const base = `${input.section}/${dress.id}`;
   try {
@@ -105,13 +114,19 @@ export async function createDress(
       .select('*')
       .single();
     if (updateError) fail(updateError, 'Could not save the photo.');
-    return updated as Dress;
+    return toDress(updated as Dress);
   } catch (e) {
     // Don't leave a dress without a photo behind.
     await supabase.storage.from(BUCKET).remove([`${base}/full.jpg`, `${base}/thumb.jpg`]);
     await supabase.from('dresses').delete().eq('id', dress.id);
     throw e;
   }
+}
+
+export async function updateDress(id: string, details: DressDetails): Promise<Dress> {
+  const { data, error } = await supabase.from('dresses').update(details).eq('id', id).select('*').single();
+  if (error) fail(error, 'Could not save the changes.');
+  return toDress(data as Dress);
 }
 
 // ─── Bookings ─────────────────────────────────────────────────────────────────
@@ -130,7 +145,7 @@ export async function listBookingsBetween(
     .or(`returned_on.is.null,returned_on.gte.${addDays(from, -1)}`)
     .order('start_date');
   if (error) fail(error, 'Could not load bookings.');
-  return (data as BookingWithDress[]).map(toBooking);
+  return (data as BookingWithDress[]).map(toBookingWithDress);
 }
 
 export async function listBookings(
@@ -144,7 +159,7 @@ export async function listBookings(
       : query.not('returned_on', 'is', null).order('returned_on', { ascending: false }).limit(100);
   const { data, error } = await query;
   if (error) fail(error, 'Could not load bookings.');
-  return (data as BookingWithDress[]).map(toBooking);
+  return (data as BookingWithDress[]).map(toBookingWithDress);
 }
 
 export async function listBookingsForDress(dressId: string): Promise<Booking[]> {
@@ -161,7 +176,7 @@ export async function listBookingsForDress(dressId: string): Promise<Booking[]> 
 export async function getBooking(id: string): Promise<BookingWithDress> {
   const { data, error } = await supabase.from('bookings').select(BOOKING_WITH_DRESS).eq('id', id).single();
   if (error) fail(error, 'Could not load this booking.');
-  return toBooking(data as BookingWithDress);
+  return toBookingWithDress(data as BookingWithDress);
 }
 
 export class DressUnavailableError extends Error {}

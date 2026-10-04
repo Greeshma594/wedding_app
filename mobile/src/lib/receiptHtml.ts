@@ -29,7 +29,7 @@ function row(label: string, value: string, className = ''): string {
 export function buildReceiptHtml(input: ReceiptInput): string {
   const { booking: b, shopName, currencySymbol } = input;
   const money = (n: number) => esc(formatMoney(n, currencySymbol));
-  const dressDetails = [b.dress.size && `Size ${b.dress.size}`, b.dress.colour].filter(Boolean).join(' · ');
+  const dressDetails = b.dress.size ? `Size ${b.dress.size}` : '';
   const shortId = b.id.slice(0, 8).toUpperCase();
 
   const extras = [
