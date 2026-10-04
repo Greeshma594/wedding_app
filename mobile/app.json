@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Bridal Rentals",
+    "slug": "wedding-rental-app",
+    "scheme": "weddingrentals",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F3E6EE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Bridal Rentals to choose dress photos from your library.",
+          "cameraPermission": "Allow Bridal Rentals to take photos of dresses."
+        }
+      ]
+    ]
+  }
+}
