@@ -1,6 +1,7 @@
 import { Image, Pressable, StyleSheet, Text, View, type ImageStyle } from 'react-native';
 
 import { photoUrl } from '../lib/api';
+import { formatMoney } from '../lib/format';
 import type { Dress } from '../lib/types';
 import { colors, radius, space } from '../theme';
 
@@ -33,6 +34,7 @@ export function DressGrid({ dresses, onPress }: { dresses: Dress[]; onPress: (dr
             <Text style={styles.name} numberOfLines={1}>
               {d.name}
             </Text>
+            {d.price !== null ? <Text style={styles.price}>{formatMoney(d.price)}</Text> : null}
           </View>
         </Pressable>
       ))}
@@ -55,4 +57,5 @@ const styles = StyleSheet.create({
   tileText: { padding: space.sm, gap: 2 },
   code: { fontSize: 12, fontWeight: '700', color: colors.accent },
   name: { fontSize: 14, color: colors.ink },
+  price: { fontSize: 13, fontWeight: '600', color: colors.muted },
 });

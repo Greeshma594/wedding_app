@@ -14,10 +14,14 @@ export function isSection(value: unknown): value is Section {
 export interface Dress {
   id: string;
   section: Section;
+  /** Given automatically by the database: WW-001… or WG-001… */
   code: string;
   name: string;
   size: string | null;
-  colour: string | null;
+  /** Rental price, used to prefill bookings and filter the catalogue. */
+  price: number | null;
+  /** Lower-case words for filtering, such as colours: ['red', 'silk']. */
+  tags: string[];
   notes: string | null;
   image_path: string | null;
   thumb_path: string | null;
