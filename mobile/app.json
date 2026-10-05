@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Bridal Rentals",
+    "name": "Rental Jeannie",
     "slug": "wedding-rental-app",
     "scheme": "weddingrentals",
     "version": "1.0.0",
@@ -8,9 +8,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rentaljeannie.app"
     },
     "android": {
+      "package": "com.rentaljeannie.app",
       "adaptiveIcon": {
         "backgroundColor": "#F3E6EE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -29,8 +31,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Bridal Rentals to choose dress photos from your library.",
-          "cameraPermission": "Allow Bridal Rentals to take photos of dresses."
+          "photosPermission": "Allow Rental Jeannie to choose dress photos from your library.",
+          "cameraPermission": "Allow Rental Jeannie to take photos of dresses."
         }
       ]
     ]
