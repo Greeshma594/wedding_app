@@ -68,8 +68,37 @@ npx expo start
 Install **Expo Go** on your phone and scan the QR code. Expo Go must support Expo SDK 57.
 After changing `.env`, restart with `npx expo start --clear`.
 
-To make installable builds for the Play Store and App Store later, use EAS:
-`npx eas-cli@latest build`.
+Expo Go is for testing. To install the app on staff phones, build it once (below).
+
+## Install on Android phones (APK)
+
+Builds run on Expo's servers (free plan) and give you an APK file to install directly, so staff
+don't need Expo Go or a laptop. Run these in the `mobile` folder.
+
+1. Create a free account at [expo.dev](https://expo.dev), then sign in and link the project:
+   ```bash
+   npx eas-cli@latest login
+   npx eas-cli@latest init
+   ```
+2. Save the app settings in Expo. `.env` stays on your laptop and isn't sent to the build servers.
+   Use the same values as your `.env`:
+   ```bash
+   npx eas-cli@latest env:create --environment preview --name EXPO_PUBLIC_SUPABASE_URL --value "https://your-project-ref.supabase.co" --visibility plaintext
+   npx eas-cli@latest env:create --environment preview --name EXPO_PUBLIC_SUPABASE_KEY --value "sb_publishable_..." --visibility plaintext
+   npx eas-cli@latest env:create --environment preview --name EXPO_PUBLIC_SHOP_NAME --value "Rental Jeannie" --visibility plaintext
+   ```
+3. Build the APK. The first build takes about 10–20 minutes:
+   ```bash
+   npx eas-cli@latest build --platform android --profile preview
+   ```
+4. When it finishes, the terminal shows a link and a QR code. Open it on each Android phone, download
+   the APK and install it. Android asks once to allow installing apps from your browser.
+
+To update the app after code changes, run step 3 again and install the new APK over the old one. Bookings
+and dresses are kept, because they live in Supabase.
+
+iPhones need an Apple Developer account (US$99 a year) and are installed through TestFlight:
+`npx eas-cli@latest build --platform ios --profile production`, then `npx eas-cli@latest submit --platform ios`.
 
 ## Development
 
